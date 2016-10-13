@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<sip-app>
+	<!-- Archetype Created SIP Application -->
+	<app-name>com.zczg.app.SipAppP2PApplication</app-name>
+	
+	<servlet-selection>
+		<main-servlet>
+			SipAppP2P
+		</main-servlet>
+	</servlet-selection>
+
+	<servlet>
+		<servlet-name>SipAppP2PServlet</servlet-name>
+		<display-name>SipAppP2PServlet</display-name>
+		<description>SipAppP2P Servlet</description>
+		<servlet-class>
+			com.zczg.app.SipAppP2P
+		</servlet-class>
+		<load-on-startup>1</load-on-startup>
+	</servlet>	
+</sip-app>
