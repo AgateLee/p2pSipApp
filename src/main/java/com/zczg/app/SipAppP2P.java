@@ -29,6 +29,7 @@ import javax.servlet.sip.SipServlet;
 import javax.servlet.sip.SipServletRequest;
 import javax.servlet.sip.SipServletResponse;
 import javax.servlet.sip.SipSession;
+import javax.servlet.sip.URI;
 import javax.servlet.sip.Address;
 import javax.servlet.sip.SipFactory;
 
@@ -36,74 +37,55 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import com.zczg.app.*;
+import com.zczg.util.CurEnv;
 
-/**
- * This example shows a typical UAS and reply 200 OK to any INVITE or BYE it receives
- * 
- * @author Jean Deruelle
- *
- */
 public class SipAppP2P extends SipServlet {
-
+	
 	private static Log logger = LogFactory.getLog(SipAppP2P.class);
 	private SipFactory sipFactory;
 	private static final String CONTACT_HEADER = "Contact";
+	private CurEnv cur_env = new CurEnv();
 	
 	@Override
 	public void init(ServletConfig servletConfig) throws ServletException {
 		super.init(servletConfig);
 		logger.info("the p2pSipApp has been started");
+		
+		try { 			
+			// Getting the Sip factory from the JNDI Context
+			Properties jndiProps = new Properties();			
+			Context initCtx = new InitialContext(jndiProps);
+			Context envCtx = (Context) initCtx.lookup("java:comp/env");
+			sipFactory = (SipFactory) envCtx.lookup("sip/org.mobicents.servlet.sip.example.SimpleApplication/SipFactory");
+			logger.info("Sip Factory ref from JNDI : " + sipFactory);
+		} catch (NamingException e) {
+			throw new ServletException("Uh oh -- JNDI problem !", e);
+		}
+		
+		//TO DO init db
+		
 	}
 
 	@Override
 	protected void doInvite(SipServletRequest request) throws ServletException,
 			IOException {
 
-		logger.info("Got request:\n"
-				+ request.toString());
+		logger.info("Got INVITE: " + request.toString());
 		
-		SipSession session = request.getSession();
-		Address secondPartyAddress = (Address) request.getSession()
-				.getAttribute("SecondPartyAddress");
-		if (secondPartyAddress != null) {
-
-			SipServletRequest invite = sipFactory.createRequest(request
-					.getApplicationSession(), "INVITE", session
-					.getRemoteParty(), secondPartyAddress);
-
-			logger.info("Found second party -- sending INVITE to "
-					+ secondPartyAddress);
-
-			String contentType = request.getContentType();
-			if (contentType.trim().equals("application/sdp")) {
-				invite.setContent(request.getContent(), "application/sdp");
-			}
-
-			session.setAttribute("LinkedSession", invite.getSession());
-			invite.getSession().setAttribute("LinkedSession", session);
-
-			SipServletResponse ok = request.createResponse(200);
-			invite.getSession().setAttribute("FirstPartyOk", ok);
-			invite.getSession().setAttribute("FirstPartyContent", request.getContent());
-			
-			Call call = (Call) session.getAttribute("call");
-			
-			// The call links the two sessions, add the new session to the call
-			call.addSession(invite.getSession());
-			invite.getSession().setAttribute("call", call);
-			
-			invite.send();
-
-			session.setAttribute("InviteSent", Boolean.TRUE);
-		}
+		SipServletResponse ring = request.createResponse(SipServletResponse.SC_RINGING);
+		ring.send();
+		
+		String fromUri = request.getFrom().getURI().toString();
+		String toUri = request.getTo().getURI().toString();
+		
+		request.createResponse(486)
 	}
 	
 	@Override
-	protected void doResponse(SipServletResponse response)
+	protected void doAck(SipServletRequest request)
 			throws ServletException, IOException {
 
-		logger.info("SimpleProxyServlet: Got response:\n" + response);
-		super.doResponse(response);
+		logger.info("Got: \n" + request.toString());
 	}
 	
 	@Override
@@ -141,6 +123,7 @@ public class SipAppP2P extends SipServlet {
 	
 	protected void doRegister(SipServletRequest req) throws ServletException, IOException {
 		logger.info("Received register request: " + req.getTo());
+
 		int response = SipServletResponse.SC_OK;
 		SipServletResponse resp = req.createResponse(response);
 		HashMap<String, String> users = (HashMap<String, String>) getServletContext().getAttribute("registeredUsersMap");

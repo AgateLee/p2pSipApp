@@ -6,7 +6,7 @@
 	
 	<servlet-selection>
 		<main-servlet>
-			SipAppP2P
+			SipAppP2PServlet
 		</main-servlet>
 	</servlet-selection>
 
