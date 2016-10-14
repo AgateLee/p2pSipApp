@@ -38,6 +38,7 @@ import org.apache.commons.logging.LogFactory;
 
 import com.zczg.app.*;
 import com.zczg.util.CurEnv;
+import com.zczg.util.JDBCUtils;
 
 public class SipAppP2P extends SipServlet {
 	
@@ -45,6 +46,7 @@ public class SipAppP2P extends SipServlet {
 	private SipFactory sipFactory;
 	private static final String CONTACT_HEADER = "Contact";
 	private CurEnv cur_env = new CurEnv();
+	private JDBCUtils db = new JDBCUtils();
 	
 	@Override
 	public void init(ServletConfig servletConfig) throws ServletException {
@@ -63,7 +65,8 @@ public class SipAppP2P extends SipServlet {
 		}
 		
 		//TO DO init db
-		
+		db.update("update p2puser set state = " + cur_env.getSettingsInt().get("user_offline"));
+		db.update("truncate p2psession");
 	}
 
 	@Override
@@ -78,7 +81,7 @@ public class SipAppP2P extends SipServlet {
 		String fromUri = request.getFrom().getURI().toString();
 		String toUri = request.getTo().getURI().toString();
 		
-		request.createResponse(486)
+//		request.createResponse(486)
 	}
 	
 	@Override
