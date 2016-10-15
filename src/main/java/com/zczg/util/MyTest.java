@@ -1,5 +1,8 @@
 package com.zczg.util;
 
+import java.util.Iterator;
+import java.util.Map;
+
 import org.apache.log4j.Logger;
 
 public class MyTest {		
@@ -28,8 +31,14 @@ public class MyTest {
 	{
 		logger.info("test");
 		JDBCUtils db = new JDBCUtils();
+		System.out.println(cur_env.getSettingsInt().get("user_idle"));
+		Map<String,Object> map = db.queryForMap("select * from p2puser where name = 'bob'");
+
+		for(Map.Entry<String, Object> entry: map.entrySet())
+		{
+			System.out.println(entry.getKey() + " " + entry.getValue());
+		}
 		
-		db.update("update p2puser set state = " + cur_env.getSettingsInt().get("user_offline"));
-		db.update("truncate test");
+		System.out.println(System.getProperty("user.dir"));
 	}
 }

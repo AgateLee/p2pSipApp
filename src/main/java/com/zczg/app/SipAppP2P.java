@@ -53,17 +53,6 @@ public class SipAppP2P extends SipServlet {
 		super.init(servletConfig);
 		logger.info("the p2pSipApp has been started");
 		
-		try { 			
-			// Getting the Sip factory from the JNDI Context
-			Properties jndiProps = new Properties();			
-			Context initCtx = new InitialContext(jndiProps);
-			Context envCtx = (Context) initCtx.lookup("java:comp/env");
-			sipFactory = (SipFactory) envCtx.lookup("sip/org.mobicents.servlet.sip.example.SimpleApplication/SipFactory");
-			logger.info("Sip Factory ref from JNDI : " + sipFactory);
-		} catch (NamingException e) {
-			throw new ServletException("Uh oh -- JNDI problem !", e);
-		}
-		
 		//TO DO init db
 		db.update("update p2puser set state = " + cur_env.getSettingsInt().get("user_offline"));
 		db.update("truncate p2psession");
@@ -80,6 +69,8 @@ public class SipAppP2P extends SipServlet {
 		
 		String fromUri = request.getFrom().getURI().toString();
 		String toUri = request.getTo().getURI().toString();
+		
+		logger.debug("Call from " + fromUri + " to " + toUri);
 		
 //		request.createResponse(486)
 	}
