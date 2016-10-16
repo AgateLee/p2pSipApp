@@ -72,7 +72,8 @@ public class SipAppP2P extends SipServlet {
 		
 		logger.debug("Call from " + fromUri + " to " + toUri);
 		
-//		request.createResponse(486)
+		SipServletResponse busy = request.createResponse(486);
+		busy.send();
 	}
 	
 	@Override
