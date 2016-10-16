@@ -25,6 +25,7 @@ import java.util.Properties;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.log4j.Logger;
 
 public class JDBCUtils {
 	
@@ -32,7 +33,7 @@ public class JDBCUtils {
 	public static String URL = "jdbc:mysql://10.109.247.126:3306/sip";
 	public static String USER_NAME = "root";
 	public static String PASSWORD = "123456";
-	private static Log logger = LogFactory.getLog(JDBCUtils.class);
+	private static Logger logger = Logger.getLogger(JDBCUtils.class);
 	
 	public static void main(String[] args) throws SQLException{
 		JDBCUtils db = new JDBCUtils();

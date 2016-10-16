@@ -35,6 +35,7 @@ import javax.servlet.sip.SipFactory;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.log4j.Logger;
 
 import com.zczg.app.*;
 import com.zczg.util.CurEnv;
@@ -42,7 +43,7 @@ import com.zczg.util.JDBCUtils;
 
 public class SipAppP2P extends SipServlet {
 	
-	private static Log logger = LogFactory.getLog(SipAppP2P.class);
+	private static Logger logger = Logger.getLogger(SipAppP2P.class);
 	private SipFactory sipFactory;
 	private static final String CONTACT_HEADER = "Contact";
 	private CurEnv cur_env = new CurEnv();
@@ -119,29 +120,13 @@ public class SipAppP2P extends SipServlet {
 	protected void doRegister(SipServletRequest req) throws ServletException, IOException {
 		logger.info("Received register request: " + req.getTo());
 
-		int response = SipServletResponse.SC_OK;
+		int response = SipServletResponse.SC_PROXY_AUTHENTICATION_REQUIRED;
 		SipServletResponse resp = req.createResponse(response);
-		HashMap<String, String> users = (HashMap<String, String>) getServletContext().getAttribute("registeredUsersMap");
-		if(users == null) users = new HashMap<String, String>();
-		getServletContext().setAttribute("registeredUsersMap", users);
 		
 		Address address = req.getAddressHeader(CONTACT_HEADER);
-		String fromURI = req.getFrom().getURI().toString();
+		String fromURI = req.getFrom().toString();
 		
-		int expires = address.getExpires();
-		if(expires < 0) {
-			expires = req.getExpires();
-		}
-		if(expires == 0) {
-			users.remove(fromURI);
-			logger.info("User " + fromURI + " unregistered");
-		} else {
-			resp.setAddressHeader(CONTACT_HEADER, address);
-			users.put(fromURI, address.getURI().toString());
-			logger.info("User " + fromURI + 
-					" registered with an Expire time of " + expires);
-		}				
-						
+		resp.setAddressHeader(CONTACT_HEADER, address);				
 		resp.send();
 	}
 }
