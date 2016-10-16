@@ -71,7 +71,7 @@ public class JDBCUtils {
 	 * Get connection
 	 * @return
 	 */
-	public Connection getconnnection(){
+	public static Connection getconnnection(){
 		Connection con = null;
 		try {
 			con = DriverManager.getConnection(URL,USER_NAME,PASSWORD);
@@ -166,7 +166,7 @@ public class JDBCUtils {
 	 * @param args
 	 * @return
 	 */
-	public int update(String sql,Object ... args){
+	public static int update(String sql,Object ... args){
 		int result = 0;
 		Connection con = getconnnection();
 		PreparedStatement ps = null; 
@@ -196,7 +196,7 @@ public class JDBCUtils {
 	 * @param args
 	 * @return Map<String,Object>
 	 */
-	public Map<String,Object> queryForMap(String sql,Object ... args){
+	public static Map<String,Object> queryForMap(String sql,Object ... args){
 		Map<String,Object> result = new HashMap<String, Object>();
 		List<Map<String, Object>> list = queryForList(sql, args);
 		if(list.size() > 0){
@@ -211,7 +211,7 @@ public class JDBCUtils {
 	 * @param args
 	 * @return <T>
 	 */
-	public <T> T queryForObject(String sql,Class<T> clz,Object ... args){
+	public static <T> T queryForObject(String sql,Class<T> clz,Object ... args){
 		T result = null;
 		List<T> list =queryForList(sql, clz, args);
 		if(list.size()>0){
@@ -226,7 +226,7 @@ public class JDBCUtils {
 	 * @param args
 	 * @return List<Map<String,Object>>
 	 */
-	public List<Map<String,Object>> queryForList(String sql,Object ... args){
+	public static List<Map<String,Object>> queryForList(String sql,Object ... args){
 		List<Map<String,Object>> result = new ArrayList<Map<String,Object>>();
 		Connection con = null;
 		ResultSet rs = null;
@@ -264,7 +264,7 @@ public class JDBCUtils {
 	 * @param args
 	 * @return List<T>
 	 */
-	public <T> List<T> queryForList(String sql,Class<T> clz,Object ... args){
+	public static <T> List<T> queryForList(String sql,Class<T> clz,Object ... args){
 		List<T> result = new ArrayList<T>();
 		Connection con = null;
 		PreparedStatement ps = null;

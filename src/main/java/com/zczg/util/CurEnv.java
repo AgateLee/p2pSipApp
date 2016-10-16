@@ -34,6 +34,13 @@ public class CurEnv {
 		
 		return null;
 	}
+	
+	public String myDigest(String username, String realm, String passwd, String nonce, String method, String url)
+	{
+		String secret = myMD5(username + ":" + realm + ":" + passwd);
+		String data = nonce + ":" + myMD5(method + ":" + url);
+		return myMD5(secret + ":" + data);
+	}
 
 	public Map<String, String> getSettings() {
 		return settings;

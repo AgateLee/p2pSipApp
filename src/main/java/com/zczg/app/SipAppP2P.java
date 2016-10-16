@@ -17,7 +17,11 @@
 package com.zczg.app;
 
 import java.io.IOException;
+import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 import javax.naming.Context;
@@ -40,6 +44,7 @@ import org.apache.log4j.Logger;
 import com.zczg.app.*;
 import com.zczg.util.CurEnv;
 import com.zczg.util.JDBCUtils;
+import com.zczg.util.RandomCharUtil;
 
 public class SipAppP2P extends SipServlet {
 	
@@ -47,7 +52,6 @@ public class SipAppP2P extends SipServlet {
 	private SipFactory sipFactory;
 	private static final String CONTACT_HEADER = "Contact";
 	private CurEnv cur_env = new CurEnv();
-	private JDBCUtils db = new JDBCUtils();
 	
 	@Override
 	public void init(ServletConfig servletConfig) throws ServletException {
@@ -55,8 +59,8 @@ public class SipAppP2P extends SipServlet {
 		logger.info("the p2pSipApp has been started");
 		
 		//TO DO init db
-		db.update("update p2puser set state = " + cur_env.getSettingsInt().get("user_offline"));
-		db.update("truncate p2psession");
+		JDBCUtils.update("update p2puser set state = " + cur_env.getSettingsInt().get("user_offline"));
+		JDBCUtils.update("truncate p2psession");
 	}
 
 	@Override
@@ -120,13 +124,27 @@ public class SipAppP2P extends SipServlet {
 	protected void doRegister(SipServletRequest req) throws ServletException, IOException {
 		logger.info("Received register request: " + req.getTo());
 
-		int response = SipServletResponse.SC_PROXY_AUTHENTICATION_REQUIRED;
-		SipServletResponse resp = req.createResponse(response);
+		SipServletResponse resp = req.createResponse(SipServletResponse.SC_PROXY_AUTHENTICATION_REQUIRED);
+		logger.info(req.toString());
 		
-		Address address = req.getAddressHeader(CONTACT_HEADER);
-		String fromURI = req.getFrom().toString();
+		String from = req.getFrom().toString();
+		String username = from.substring(from.indexOf("sip:") + 4, from.indexOf("@"));
+		String ip = from.substring(from.indexOf("@") + 1, from.indexOf(">;tag="));
+		logger.info("User " + username + " ip " + ip);
+		Map<String, Object> user =  JDBCUtils.queryForMap("select * from p2puser where name = '" + username + "'");
 		
-		resp.setAddressHeader(CONTACT_HEADER, address);				
+		String nonce = RandomCharUtil.getRandomNumberUpperLetterChar(32);
+		resp.addHeader("Proxy-Authenticate", "Digest realm=\"" + cur_env.getSettings().get("realm") + "\""
+				+ ",nonce=\"" + nonce + "\"");
+		
+		String auth = req.getHeader("Proxy-Authorization");
+		logger.info(auth);
+		if(auth != null)
+		{
+			int st = auth.indexOf("response=\"") + 10;
+			int ed = auth.indexOf("\"", st);
+			logger.info("auth " + auth.substring(st, ed));
+		}
 		resp.send();
 	}
 }
