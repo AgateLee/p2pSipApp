@@ -19,31 +19,18 @@ package com.zczg.app;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
-import java.util.Properties;
-
-import javax.naming.Context;
-import javax.naming.InitialContext;
-import javax.naming.NamingException;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.sip.SipServlet;
 import javax.servlet.sip.SipServletRequest;
 import javax.servlet.sip.SipServletResponse;
 import javax.servlet.sip.SipSession;
-import javax.servlet.sip.URI;
 import javax.servlet.sip.Address;
 import javax.servlet.sip.SipFactory;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.log4j.Logger;
 
-import com.zczg.app.*;
 import com.zczg.util.CurEnv;
 import com.zczg.util.JDBCUtils;
 import com.zczg.util.RandomCharUtil;
@@ -91,10 +78,15 @@ public class SipAppP2P extends SipServlet {
 				SipServletRequest invite = sipFactory.createRequest(request.getSession().getApplicationSession(), "INVITE", from, to);
 				
 				invite.setContent(request.getContent(), request.getContentType());
-				logger.info("###" + invite.toString());
+				
+				SipServletRequest Bye = request.getSession().createRequest("BYE");
+				Bye.setHeader("From", request.getFrom().toString());
+				Bye.setHeader("To", request.getTo().toString());
 				
 				cur_env.getTemp().put(invite.getCallId() + "ring", request.createResponse(SipServletResponse.SC_RINGING));
 				cur_env.getTemp().put(invite.getCallId() + "ok", request.createResponse(SipServletResponse.SC_OK));
+				cur_env.getTemp().put(invite.getCallId() + "bye", Bye);
+				cur_env.getTemp().put(invite.getCallId() + "pass", request.getCallId());
 				invite.send();
 			}
 			else if(toState.equals(cur_env.getSettingsInt().get("user_busy")))
@@ -125,6 +117,11 @@ public class SipAppP2P extends SipServlet {
 			SipServletResponse ring = (SipServletResponse)cur_env.getTemp().get(resp.getCallId() + "ring");
 			ring.send();
 			cur_env.getTemp().remove(resp.getCallId() + "ring");
+			
+			SipServletRequest Bye = resp.getSession().createRequest("BYE");
+			Bye.setHeader("From", resp.getFrom().toString());
+			Bye.setHeader("To", resp.getTo().toString());
+			cur_env.getTemp().put(cur_env.getTemp().get(resp.getCallId() + "pass") + "bye", Bye);
 		}
 	}
 	
@@ -145,9 +142,11 @@ public class SipAppP2P extends SipServlet {
 			SipServletResponse ok = (SipServletResponse)cur_env.getTemp().get(resp.getCallId() + "ok");
 			
 			ok.setContent(resp.getContent(), resp.getContentType());
-			logger.info("####" + ok.toString());
 			ok.send();
 			cur_env.getTemp().remove(resp.getCallId() + "ok");
+			
+			SipServletRequest ack = resp.createAck();
+			ack.send();
 		}
 	}
 
@@ -155,7 +154,11 @@ public class SipAppP2P extends SipServlet {
 	protected void doBye(SipServletRequest request) throws ServletException,
 			IOException {
 		SipServletResponse sipServletResponse = request.createResponse(SipServletResponse.SC_OK);
-		sipServletResponse.send();	
+		sipServletResponse.send();
+		SipServletRequest Bye = (SipServletRequest) cur_env.getTemp().get(request.getCallId() + "bye");
+		Bye.send();
+		
+		cur_env.getTemp().clear();
 	}
 	
 //	@Override
