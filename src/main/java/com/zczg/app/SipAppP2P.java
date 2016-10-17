@@ -90,11 +90,11 @@ public class SipAppP2P extends SipServlet {
 						+ userto.get("port"));
 				SipServletRequest invite = sipFactory.createRequest(request.getSession().getApplicationSession(), "INVITE", from, to);
 				
-				invite.setContentType(request.getContentType());
-				invite.setContentLength(request.getContentLength());
 				invite.setContent(request.getContent(), request.getContentType());
 				logger.info("###" + invite.toString());
 				
+				cur_env.getTemp().put(invite.getCallId() + "ring", request.createResponse(SipServletResponse.SC_RINGING));
+				cur_env.getTemp().put(invite.getCallId() + "ok", request.createResponse(SipServletResponse.SC_OK));
 				invite.send();
 			}
 			else if(toState.equals(cur_env.getSettingsInt().get("user_busy")))
@@ -116,35 +116,38 @@ public class SipAppP2P extends SipServlet {
 	}
 	
 	@Override
+    protected void doProvisionalResponse(SipServletResponse resp)
+			throws ServletException, IOException {
+		logger.info("Got RESPONSE: \n" + resp.toString());
+		
+		if(((Integer)resp.getStatus()).equals(SipServletResponse.SC_RINGING))
+		{
+			SipServletResponse ring = (SipServletResponse)cur_env.getTemp().get(resp.getCallId() + "ring");
+			ring.send();
+			cur_env.getTemp().remove(resp.getCallId() + "ring");
+		}
+	}
+	
+	@Override
 	protected void doAck(SipServletRequest request)
 			throws ServletException, IOException {
 
-		logger.info("Got: \n" + request.toString());
+		logger.info("Got ACK: \n" + request.toString());
 	}
 	
 	@Override
     protected void doSuccessResponse(SipServletResponse resp)
 			throws ServletException, IOException {
 		logger.info("Got OK");
-		SipSession session = resp.getSession();
-
+		
 		String cSeqValue = resp.getHeader("CSeq");
 		if(cSeqValue.indexOf("INVITE") != -1) {				
-			logger.info("Got OK from second party -- sending ACK");
-
-			SipServletRequest secondPartyAck = resp.createAck();
-			SipServletRequest firstPartyOk = (SipServletRequest) resp
-					.getSession().getAttribute("FirstPartyOk");
-
-//					if (resp.getContentType() != null && resp.getContentType().equals("application/sdp")) {
-				firstPartyOk.setContent(resp.getContent(),
-						"application/sdp");
-				secondPartyAck.setContent(resp.getSession().getAttribute("FirstPartyContent"),
-						"application/sdp");
-//					}
-
-			firstPartyOk.send();
-			secondPartyAck.send();
+			SipServletResponse ok = (SipServletResponse)cur_env.getTemp().get(resp.getCallId() + "ok");
+			
+			ok.setContent(resp.getContent(), resp.getContentType());
+			logger.info("####" + ok.toString());
+			ok.send();
+			cur_env.getTemp().remove(resp.getCallId() + "ok");
 		}
 	}
 

@@ -2,6 +2,7 @@ package com.zczg.util;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.log4j.Logger;
@@ -9,6 +10,7 @@ import org.apache.log4j.Logger;
 public class CurEnv {
 	private Map<String, String> settings;
 	private Map<String, Integer> settingsInt;
+	private Map<String, Object> temp;
 	private static Logger logger = Logger.getLogger(CurEnv.class);
 	
 	public CurEnv()
@@ -16,6 +18,7 @@ public class CurEnv {
 		Para tp = new Para();
 		settings = tp.getParaPair("sysstr", 0, 1);
 		settingsInt = tp.getParaPairInt("sysint", 0, 1);
+		temp = new HashMap<String, Object>();
 	}
 	
 	public String myMD5(String md5)
@@ -66,5 +69,14 @@ public class CurEnv {
 
 	public void setSettingsInt(Map<String, Integer> settingsInt) {
 		this.settingsInt = settingsInt;
+	}
+
+	public Map<String, Object> getTemp() {
+		return temp;
+	}
+
+	public void setTemp(Map<String, Object> temp) {
+		this.temp = temp;
 	}	
+	
 }
