@@ -59,7 +59,7 @@ public class SipAppP2P extends SipServlet {
 	public void init(ServletConfig servletConfig) throws ServletException {
 		super.init(servletConfig);
 		logger.info("the p2pSipApp has been started");
-		
+		sipFactory = (SipFactory)getServletContext().getAttribute("javax.servlet.sip.SipFactory");
 		//TO DO init db
 		JDBCUtils.update("update p2puser set state = " + cur_env.getSettingsInt().get("user_offline")
 				+ ", auth = null");
@@ -72,18 +72,47 @@ public class SipAppP2P extends SipServlet {
 
 		logger.info("Got INVITE: " + request.toString());
 		
-		SipServletResponse ring = request.createResponse(SipServletResponse.SC_RINGING);
-		ring.send();
-		
 		String fromUri = request.getFrom().getURI().toString();
 		String toUri = request.getTo().getURI().toString();
+		Map<String, Object> userfrom =  JDBCUtils.queryForMap("select * from p2puser where sipname = '" + fromUri + "'");
+		Map<String, Object> userto =  JDBCUtils.queryForMap("select * from p2puser where sipname = '" + toUri + "'");
 		
 		logger.info("Call from " + fromUri + " to " + toUri);
 		
-//		Map<String, Object> user =  JDBCUtils.queryForMap("select * from p2puser where name = '" + username + "'");
-		
-		SipServletResponse busy = request.createResponse(486);
-		busy.send();
+		if(!userto.equals(null) && !userfrom.equals(null))
+		{
+			Integer toState = (Integer)userto.get("state");
+			if(toState.equals(cur_env.getSettingsInt().get("user_idle")))
+			{
+				Address from = sipFactory.createAddress("sip:" + userfrom.get("name") + "@" + userfrom.get("ip") + ":" 
+							+ userfrom.get("port"));
+				Address to = sipFactory.createAddress("sip:" + userto.get("name") + "@" + userto.get("ip") + ":" 
+						+ userto.get("port"));
+				SipServletRequest invite = sipFactory.createRequest(request.getSession().getApplicationSession(), "INVITE", from, to);
+				
+				invite.setContentType(request.getContentType());
+				invite.setContentLength(request.getContentLength());
+				invite.setContent(request.getContent(), request.getContentType());
+				logger.info("###" + invite.toString());
+				
+				invite.send();
+			}
+			else if(toState.equals(cur_env.getSettingsInt().get("user_busy")))
+			{
+				SipServletResponse busy = request.createResponse(SipServletResponse.SC_BUSY_HERE);
+				busy.send();
+			}
+			else
+			{
+				SipServletResponse notfound = request.createResponse(SipServletResponse.SC_NOT_FOUND);
+				notfound.send();
+			}
+		}
+		else
+		{
+			SipServletResponse notfound = request.createResponse(SipServletResponse.SC_NOT_FOUND);
+			notfound.send();
+		}
 	}
 	
 	@Override
