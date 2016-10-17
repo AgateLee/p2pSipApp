@@ -17,6 +17,8 @@
 package com.zczg.app;
 
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -59,7 +61,8 @@ public class SipAppP2P extends SipServlet {
 		logger.info("the p2pSipApp has been started");
 		
 		//TO DO init db
-		JDBCUtils.update("update p2puser set state = " + cur_env.getSettingsInt().get("user_offline"));
+		JDBCUtils.update("update p2puser set state = " + cur_env.getSettingsInt().get("user_offline")
+				+ ", auth = null");
 		JDBCUtils.update("truncate p2psession");
 	}
 
@@ -121,10 +124,15 @@ public class SipAppP2P extends SipServlet {
 		sipServletResponse.send();	
 	}
 	
+//	@Override
+//	protected void doSubscribe(SipServletRequest request) throws ServletException,
+//			IOException {
+//		// DO NOTHING
+//	}
+	
+	@Override
 	protected void doRegister(SipServletRequest req) throws ServletException, IOException {
 		logger.info("Received register request: " + req.getTo());
-
-		SipServletResponse resp = req.createResponse(SipServletResponse.SC_PROXY_AUTHENTICATION_REQUIRED);
 		logger.info(req.toString());
 		
 		String from = req.getFrom().toString();
@@ -133,18 +141,66 @@ public class SipAppP2P extends SipServlet {
 		logger.info("User " + username + " ip " + ip);
 		Map<String, Object> user =  JDBCUtils.queryForMap("select * from p2puser where name = '" + username + "'");
 		
-		String nonce = RandomCharUtil.getRandomNumberUpperLetterChar(32);
-		resp.addHeader("Proxy-Authenticate", "Digest realm=\"" + cur_env.getSettings().get("realm") + "\""
-				+ ",nonce=\"" + nonce + "\"");
-		
 		String auth = req.getHeader("Proxy-Authorization");
-		logger.info(auth);
-		if(auth != null)
+		if(auth == null)
 		{
+			SipServletResponse resp = req.createResponse(SipServletResponse.SC_UNAUTHORIZED);
+			
+			String nonce = RandomCharUtil.getRandomNumberUpperLetterChar(32);
+			resp.addHeader("Proxy-Authenticate", "Digest realm=\"" + cur_env.getSettings().get("realm") + "\""
+					+ ",nonce=\"" + nonce + "\",algorithm=MD5");
+			JDBCUtils.update("update p2puser set auth = '" + nonce + "' where name = '" + username + "'");
+
+			resp.send();
+			logger.info("Request authenticate for " + username);
+		}
+		else
+		{
+			Map<String,Object> map = JDBCUtils.queryForMap("select * from p2puser where name = '" + username + "'");
 			int st = auth.indexOf("response=\"") + 10;
 			int ed = auth.indexOf("\"", st);
-			logger.info("auth " + auth.substring(st, ed));
+			String digest = auth.substring(st, ed);
+			st = auth.indexOf("uri=\"") + 5;
+			ed = auth.indexOf("\"", st);
+			String uri = auth.substring(st, ed);
+			String method = req.getMethod();
+			
+			String check = cur_env.myDigest(username, cur_env.getSettings().get("realm"), 
+					(String)map.get("passwd"), (String)map.get("auth"), method, uri);
+			
+			if(digest.equals(check))
+			{
+				SipServletResponse resp = req.createResponse(SipServletResponse.SC_OK);
+				Address address = req.getAddressHeader(CONTACT_HEADER);
+				resp.setAddressHeader(CONTACT_HEADER, address);
+				
+				int expires = address.getExpires();
+				if(expires < 0) {
+					expires = req.getExpires();
+				}
+				
+				if(expires == 0) {
+					SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+					JDBCUtils.update("update p2puser set auth = null, state = "+ cur_env.getSettingsInt().get("user_offline")
+							+ ", ltime = '" + df.format(new Date()) + "' where name = '" + username + "'");
+					logger.info("User " + username + " unregistered");
+				}
+				else{
+					SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+					String now = df.format(new Date());
+					JDBCUtils.update("update p2puser set state = "+ cur_env.getSettingsInt().get("user_idle")
+							+ ", ltime = '" + df.format(new Date()) + "' where name = '" + username + "'");
+					logger.info("User " + username + " registered");
+				}
+				
+				resp.send();
+			}
+			else{
+				SipServletResponse resp = req.createResponse(SipServletResponse.SC_FORBIDDEN);
+				logger.info("User " + username + " registered fail");
+				resp.send();
+			}
 		}
-		resp.send();
+		// TODO multi device
 	}
 }

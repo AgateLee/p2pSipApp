@@ -4,9 +4,12 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Map;
 
+import org.apache.log4j.Logger;
+
 public class CurEnv {
 	private Map<String, String> settings;
 	private Map<String, Integer> settingsInt;
+	private static Logger logger = Logger.getLogger(CurEnv.class);
 	
 	public CurEnv()
 	{
@@ -37,11 +40,18 @@ public class CurEnv {
 	
 	public String myDigest(String username, String realm, String passwd, String nonce, String method, String url)
 	{
+		logger.info("username:" + username);
+		logger.info("realm:" + realm);
+		logger.info("passwd:" + passwd);
+		logger.info("nonce:" + nonce);
+		logger.info("method:" + method);
+		logger.info("url:" + url);
+		
 		String secret = myMD5(username + ":" + realm + ":" + passwd);
 		String data = nonce + ":" + myMD5(method + ":" + url);
 		return myMD5(secret + ":" + data);
 	}
-
+	
 	public Map<String, String> getSettings() {
 		return settings;
 	}

@@ -1,5 +1,7 @@
 package com.zczg.util;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -32,7 +34,12 @@ public class MyTest {
 //		logger.info("test");
 //		
 //		System.out.println(cur_env.getSettingsInt().get("user_idle"));
-//		Map<String,Object> map = JDBCUtils.queryForMap("select * from p2puser where name = 'bob'");
+		Map<String,Object> map = JDBCUtils.queryForMap("select * from p2puser where name = 'bob'");
+		System.out.println(map.get("passwd"));
+		
+		SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		String now = df.format(new Date());
+		System.out.println(now);
 //
 //		for(Map.Entry<String, Object> entry: map.entrySet())
 //		{
@@ -55,9 +62,9 @@ public class MyTest {
 //           logger.info(req.getHeader(headerName));
 //         }
 		
-		String auth = "Digest username=\"alice\",realm=\"10.109.247.126\",nonce=\"G0RHUN3A1970LQK0DIDFU7NB1VU96IRZ\",uri=\"sip:10.109.247.126\",response=\"c24a8623ba290dc39d03552dacf1420d\",algorithm=MD5";
-		int st = auth.indexOf("response=\"") + 10;
-		int ed = auth.indexOf("\"", st);
-		System.out.println("auth " + auth.substring(st, ed));
+//		String auth = "Digest username=\"alice\",realm=\"10.109.247.126\",nonce=\"G0RHUN3A1970LQK0DIDFU7NB1VU96IRZ\",uri=\"sip:10.109.247.126\",response=\"c24a8623ba290dc39d03552dacf1420d\",algorithm=MD5";
+//		int st = auth.indexOf("response=\"") + 10;
+//		int ed = auth.indexOf("\"", st);
+//		System.out.println("auth " + auth.substring(st, ed));
 	}
 }
