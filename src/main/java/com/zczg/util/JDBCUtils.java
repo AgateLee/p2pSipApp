@@ -1,15 +1,10 @@
 package com.zczg.util;
 
 
-import java.io.BufferedInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.net.URISyntaxException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -23,8 +18,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.log4j.Logger;
 
 public class JDBCUtils {
@@ -34,11 +27,6 @@ public class JDBCUtils {
 	public static String USER_NAME = "root";
 	public static String PASSWORD = "123456";
 	private static Logger logger = Logger.getLogger(JDBCUtils.class);
-	
-	public static void main(String[] args) throws SQLException{
-		JDBCUtils db = new JDBCUtils();
-		db.getconnnection();
-	}
 	
 	static {
 		try{

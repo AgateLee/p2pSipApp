@@ -3,6 +3,7 @@ package com.zczg.util;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.log4j.Logger;
@@ -34,13 +35,20 @@ public class MyTest {
 //		logger.info("test");
 //		
 //		System.out.println(cur_env.getSettingsInt().get("user_idle"));
-		Map<String,Object> map = JDBCUtils.queryForMap("select * from p2puser where name = 'bob'");
-		System.out.println(map.get("passwd"));
+//		Map<String,Object> map = JDBCUtils.queryForMap("select * from p2puser where name = 'bob'");
+//		System.out.println(map.get("passwd"));
+//		
+//		SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+//		String now = df.format(new Date());
+//		System.out.println(now);
+		String s = "<sip:bob@10.108.112.107:59445;rinstance=cdf7d4fab5c34f7f>";
+		String[] ss = s.split("[@:;]");
 		
-		SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-		String now = df.format(new Date());
-		System.out.println(now);
-//
+		for(int i = 0; i < s.length(); i++)
+		{
+			System.out.println(i + " " + ss[i]);
+		}
+		
 //		for(Map.Entry<String, Object> entry: map.entrySet())
 //		{
 //			System.out.println(entry.getKey() + " " + entry.getValue());

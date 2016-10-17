@@ -78,7 +78,9 @@ public class SipAppP2P extends SipServlet {
 		String fromUri = request.getFrom().getURI().toString();
 		String toUri = request.getTo().getURI().toString();
 		
-		logger.debug("Call from " + fromUri + " to " + toUri);
+		logger.info("Call from " + fromUri + " to " + toUri);
+		
+//		Map<String, Object> user =  JDBCUtils.queryForMap("select * from p2puser where name = '" + username + "'");
 		
 		SipServletResponse busy = request.createResponse(486);
 		busy.send();
@@ -135,11 +137,13 @@ public class SipAppP2P extends SipServlet {
 		logger.info("Received register request: " + req.getTo());
 		logger.info(req.toString());
 		
-		String from = req.getFrom().toString();
-		String username = from.substring(from.indexOf("sip:") + 4, from.indexOf("@"));
-		String ip = from.substring(from.indexOf("@") + 1, from.indexOf(">;tag="));
-		logger.info("User " + username + " ip " + ip);
-		Map<String, Object> user =  JDBCUtils.queryForMap("select * from p2puser where name = '" + username + "'");
+		String from = req.getFrom().getURI().toString();
+		String contact = req.getHeader("Contact");
+		String[] ss = contact.split("[@:;]");
+		String username = ss[1];
+		String ip = ss[2];
+		String port = ss[3];
+		logger.info("User " + username + " ip " + ip + ":" + port);
 		
 		String auth = req.getHeader("Proxy-Authorization");
 		if(auth == null)
@@ -149,10 +153,11 @@ public class SipAppP2P extends SipServlet {
 			String nonce = RandomCharUtil.getRandomNumberUpperLetterChar(32);
 			resp.addHeader("Proxy-Authenticate", "Digest realm=\"" + cur_env.getSettings().get("realm") + "\""
 					+ ",nonce=\"" + nonce + "\",algorithm=MD5");
-			JDBCUtils.update("update p2puser set auth = '" + nonce + "' where name = '" + username + "'");
+			JDBCUtils.update("update p2puser set sipname = '" + from + "', name = '" + username + "', ip = '"+ ip
+					+ "', port = '" + port + "', auth = '" + nonce + "' where sipname = '" + from + "'");
 
 			resp.send();
-			logger.info("Request authenticate for " + username);
+			logger.info("Request authenticate for " + from);
 		}
 		else
 		{
@@ -182,22 +187,21 @@ public class SipAppP2P extends SipServlet {
 				if(expires == 0) {
 					SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 					JDBCUtils.update("update p2puser set auth = null, state = "+ cur_env.getSettingsInt().get("user_offline")
-							+ ", ltime = '" + df.format(new Date()) + "' where name = '" + username + "'");
-					logger.info("User " + username + " unregistered");
+							+ ", ltime = '" + df.format(new Date()) + "' where sipname = '" + from + "'");
+					logger.info("User " + from + " unregistered");
 				}
 				else{
 					SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-					String now = df.format(new Date());
 					JDBCUtils.update("update p2puser set state = "+ cur_env.getSettingsInt().get("user_idle")
-							+ ", ltime = '" + df.format(new Date()) + "' where name = '" + username + "'");
-					logger.info("User " + username + " registered");
+							+ ", ltime = '" + df.format(new Date()) + "' where sipname = '" + from + "'");
+					logger.info("User " + from + " registered");
 				}
 				
 				resp.send();
 			}
 			else{
 				SipServletResponse resp = req.createResponse(SipServletResponse.SC_FORBIDDEN);
-				logger.info("User " + username + " registered fail");
+				logger.info("User " + from + " registered fail");
 				resp.send();
 			}
 		}
