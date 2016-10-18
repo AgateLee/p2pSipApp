@@ -66,7 +66,7 @@ public class SipAppP2P extends SipServlet {
 		
 		logger.info("Call from " + fromUri + " to " + toUri);
 		
-		if(!userto.equals(null) && !userfrom.equals(null))
+		if(userto != null && userfrom != null)
 		{
 			Integer toState = (Integer)userto.get("state");
 			if(toState.equals(cur_env.getSettingsInt().get("user_idle")))
@@ -75,18 +75,18 @@ public class SipAppP2P extends SipServlet {
 							+ userfrom.get("port"));
 				Address to = sipFactory.createAddress("sip:" + userto.get("name") + "@" + userto.get("ip") + ":" 
 						+ userto.get("port"));
-				SipServletRequest invite = sipFactory.createRequest(request.getSession().getApplicationSession(), "INVITE", from, to);
+				
+				SipSession session = request.getSession();
+				SipServletRequest invite = sipFactory.createRequest(request.getApplicationSession(), "INVITE", session.getRemoteParty(), to);
 				
 				invite.setContent(request.getContent(), request.getContentType());
 				
-				SipServletRequest Bye = request.getSession().createRequest("BYE");
-				Bye.setHeader("From", request.getFrom().toString());
-				Bye.setHeader("To", request.getTo().toString());
+				session.setAttribute("LinkedSession", invite.getSession());
+				invite.getSession().setAttribute("LinkedSession", session);
 				
 				cur_env.getTemp().put(invite.getCallId() + "ring", request.createResponse(SipServletResponse.SC_RINGING));
 				cur_env.getTemp().put(invite.getCallId() + "ok", request.createResponse(SipServletResponse.SC_OK));
-				cur_env.getTemp().put(invite.getCallId() + "bye", Bye);
-				cur_env.getTemp().put(invite.getCallId() + "pass", request.getCallId());
+				
 				invite.send();
 			}
 			else if(toState.equals(cur_env.getSettingsInt().get("user_busy")))
@@ -117,11 +117,6 @@ public class SipAppP2P extends SipServlet {
 			SipServletResponse ring = (SipServletResponse)cur_env.getTemp().get(resp.getCallId() + "ring");
 			ring.send();
 			cur_env.getTemp().remove(resp.getCallId() + "ring");
-			
-			SipServletRequest Bye = resp.getSession().createRequest("BYE");
-			Bye.setHeader("From", resp.getFrom().toString());
-			Bye.setHeader("To", resp.getTo().toString());
-			cur_env.getTemp().put(cur_env.getTemp().get(resp.getCallId() + "pass") + "bye", Bye);
 		}
 	}
 	
@@ -155,8 +150,14 @@ public class SipAppP2P extends SipServlet {
 			IOException {
 		SipServletResponse sipServletResponse = request.createResponse(SipServletResponse.SC_OK);
 		sipServletResponse.send();
-		SipServletRequest Bye = (SipServletRequest) cur_env.getTemp().get(request.getCallId() + "bye");
-		Bye.send();
+		
+		SipSession linkedSession = (SipSession) request.getSession().getAttribute("LinkedSession");
+		if(linkedSession != null)
+		{
+			SipServletRequest bye = linkedSession.createRequest("BYE");
+			bye.send();
+			logger.info(bye.toString());
+		}
 		
 		cur_env.getTemp().clear();
 	}
