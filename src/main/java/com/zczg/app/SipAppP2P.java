@@ -48,9 +48,9 @@ public class SipAppP2P extends SipServlet {
 		logger.info("the p2pSipApp has been started");
 		sipFactory = (SipFactory)getServletContext().getAttribute("javax.servlet.sip.SipFactory");
 		//TO DO init db
-		JDBCUtils.update("update p2puser set state = " + cur_env.getSettingsInt().get("user_offline")
-				+ ", auth = null");
-		JDBCUtils.update("truncate p2psession");
+//		JDBCUtils.update("update p2puser set state = " + cur_env.getSettingsInt().get("user_offline")
+//				+ ", auth = null");
+//		JDBCUtils.update("truncate p2psession");
 	}
 
 	@Override
@@ -83,9 +83,8 @@ public class SipAppP2P extends SipServlet {
 				
 				session.setAttribute("LinkedSession", invite.getSession());
 				invite.getSession().setAttribute("LinkedSession", session);
-				
-				cur_env.getTemp().put(invite.getCallId() + "ring", request.createResponse(SipServletResponse.SC_RINGING));
-				cur_env.getTemp().put(invite.getCallId() + "ok", request.createResponse(SipServletResponse.SC_OK));
+				session.setAttribute("originalRequest", request);
+				invite.getSession().setAttribute("originalRequest", invite);
 				
 				invite.send();
 			}
@@ -108,15 +107,50 @@ public class SipAppP2P extends SipServlet {
 	}
 	
 	@Override
+    protected void doCancel(SipServletRequest request)
+			throws ServletException, IOException {
+		logger.info("Got CANCEL: \n" + request.toString());
+		
+		SipSession linkedSession = (SipSession) request.getSession().getAttribute("LinkedSession");
+		if(linkedSession != null)
+		{
+			SipServletRequest origin = (SipServletRequest) linkedSession.getAttribute("originalRequest");
+			SipServletRequest cancel = origin.createCancel();
+			cancel.send();
+			logger.info(cancel.toString());
+		}
+		
+		SipServletResponse ok = request.createResponse(SipServletResponse.SC_OK);
+		ok.send();
+	}
+	
+	@Override
     protected void doProvisionalResponse(SipServletResponse resp)
 			throws ServletException, IOException {
 		logger.info("Got RESPONSE: \n" + resp.toString());
 		
-		if(((Integer)resp.getStatus()).equals(SipServletResponse.SC_RINGING))
+		SipSession linkedSession = (SipSession) resp.getSession().getAttribute("LinkedSession");
+		if(linkedSession != null)
 		{
-			SipServletResponse ring = (SipServletResponse)cur_env.getTemp().get(resp.getCallId() + "ring");
-			ring.send();
-			cur_env.getTemp().remove(resp.getCallId() + "ring");
+			SipServletRequest request = (SipServletRequest) linkedSession.getAttribute("originalRequest");
+			SipServletResponse re = request.createResponse(resp.getStatus());
+			re.send();
+			logger.info(re.toString());
+		}
+	}
+	
+	@Override
+    protected void doErrorResponse(SipServletResponse resp)
+			throws ServletException, IOException {
+		logger.info("Got ERROR: \n" + resp.toString());
+		
+		SipSession linkedSession = (SipSession) resp.getSession().getAttribute("LinkedSession");
+		if(linkedSession != null)
+		{
+			SipServletRequest request = (SipServletRequest) linkedSession.getAttribute("originalRequest");
+			SipServletResponse re = request.createResponse(resp.getStatus());
+			re.send();
+			logger.info(re.toString());
 		}
 	}
 	
@@ -134,11 +168,16 @@ public class SipAppP2P extends SipServlet {
 		
 		String cSeqValue = resp.getHeader("CSeq");
 		if(cSeqValue.indexOf("INVITE") != -1) {				
-			SipServletResponse ok = (SipServletResponse)cur_env.getTemp().get(resp.getCallId() + "ok");
-			
-			ok.setContent(resp.getContent(), resp.getContentType());
-			ok.send();
-			cur_env.getTemp().remove(resp.getCallId() + "ok");
+
+			SipSession linkedSession = (SipSession) resp.getSession().getAttribute("LinkedSession");
+			if(linkedSession != null)
+			{
+				SipServletRequest request = (SipServletRequest) linkedSession.getAttribute("originalRequest");
+				SipServletResponse re = request.createResponse(resp.getStatus());
+				re.setContent(resp.getContent(), resp.getContentType());
+				re.send();
+				logger.info(re.toString());
+			}
 			
 			SipServletRequest ack = resp.createAck();
 			ack.send();
@@ -158,8 +197,6 @@ public class SipAppP2P extends SipServlet {
 			bye.send();
 			logger.info(bye.toString());
 		}
-		
-		cur_env.getTemp().clear();
 	}
 	
 //	@Override
